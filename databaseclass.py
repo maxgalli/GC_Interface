@@ -46,7 +46,6 @@ class Database:
 		self.make_tree(parent)
 		self.make_popup(parent)
 		self.make_menu(parent)
-		self.resume_data()
 ###################################################################################################################################
 ###################################################################################################################################
 	# crea il tree di visualizzazione
@@ -67,7 +66,6 @@ class Database:
 	def make_popup(self,parent):
 		# Crea il popup menu che si apre quando seleziono un elemento del tree
 		self.popup = Menu(parent, tearoff=0)
-		self.popup.add_command(label='Print paper')
 		self.popup.add_command(label='Delete paper',command=self.delete_paper)
 		self.popup.add_separator()
 		self.popup.add_command(label='Back')
@@ -96,43 +94,15 @@ class Database:
 
 		self.menu_add = Menu(self.menu_actions,tearoff=0)
 		self.menu_actions.add_cascade(label='Add paper',menu=self.menu_add)
-		self.menu_actions.add_command(label='Export as JSON',command=self.export_as_json)
+		self.menu_actions.add_command(label='Import JSON file',command=self.import_data)
+		self.menu_actions.add_command(label='Save all as JSON',command=self.export_as_json)
+		self.menu_actions.add_command(label='Create your JSON file',command=self.create_custom_file)
 		self.menu_actions.add_command(label='Quit',command=parent.destroy)
 
-		# impossibile fare ciclo for
-		self.menu_add.add_command(label=self.measures_names[0],command=lambda:self.add_paper(self.measures_names[0]))
-		self.menu_add.add_command(label=self.measures_names[1],command=lambda:self.add_paper(self.measures_names[1]))
-		self.menu_add.add_command(label=self.measures_names[2],command=lambda:self.add_paper(self.measures_names[2]))
-		self.menu_add.add_command(label=self.measures_names[3],command=lambda:self.add_paper(self.measures_names[3]))
-		self.menu_add.add_command(label=self.measures_names[4],command=lambda:self.add_paper(self.measures_names[4]))
-		self.menu_add.add_command(label=self.measures_names[5],command=lambda:self.add_paper(self.measures_names[5]))
-		self.menu_add.add_command(label=self.measures_names[6],command=lambda:self.add_paper(self.measures_names[6]))
-		self.menu_add.add_command(label=self.measures_names[7],command=lambda:self.add_paper(self.measures_names[7]))
-		self.menu_add.add_command(label=self.measures_names[8],command=lambda:self.add_paper(self.measures_names[8]))
-		self.menu_add.add_command(label=self.measures_names[9],command=lambda:self.add_paper(self.measures_names[9]))
+		for meas in self.measures_names:
+			self.menu_add.add_command(label=meas,command=lambda meas=meas:self.add_paper(meas))
 
 		parent.config(menu=self.barra_menu)
-#####################################################################################################################################
-#####################################################################################################################################
-	# reinserisce i dati inseriti precedentemente a partire da all_measures.json
-	def resume_data(self):
-		# ricostruisce il dizionario measures, con la condizione che il file json non sia vuoto
-		if os.stat('all_measures.json').st_size > 0:
-			with open('all_measures.json') as json_file:
-				self.measures = json.load(json_file)
-				# aggiorna il numero di paper per ogni misura (elementi di number_of_papers_list)
-				for measure in self.measures_names:
-					self.number_of_papers_list[self.measures_names.index(measure)] = len(self.measures[measure])
-				# scrive nel tree
-				for name in self.measures_names:
-					count_paper = 0
-					while count_paper <= self.number_of_papers_list[self.measures_names.index(name)]:
-						if '%s_paper_%i'%(name,count_paper) in self.measures[name]:
-							self.update_only_tree (self.measures_names.index(name),count_paper)
-						count_paper=count_paper+1
-
-		#print (self.number_of_papers_list[0:11])
-		#print (self.measures)
 #######################################################################################################################################
 ########################################################################################################################################
 ########################################################################################################################################
@@ -140,10 +110,35 @@ class Database:
 ########################################################################################################################################
 #########################################################################################################################################
 ########################################################################################################################################
+	# reinserisce i dati inseriti precedentemente a partire da all_measures.json
+	def import_data(self):
+		# finestra di dialogo per far scegliere il file da aprire
+		json_file = askopenfile(mode='r',defaultextension='.json',filetypes=[("JSON Files", "*.json")],title='Import')
+		# ricostruisce il dizionario measures, con la condizione che il file json non sia vuoto
+		if os.stat('all_measures.json').st_size > 0:
+			self.measures = json.load(json_file)
+			# aggiorna il numero di paper per ogni misura (elementi di number_of_papers_list)
+			for measure in self.measures_names:
+				self.number_of_papers_list[self.measures_names.index(measure)] = len(self.measures[measure])
+			# scrive nel tree
+			for name in self.measures_names:
+				count_paper = 0
+				while count_paper <= self.number_of_papers_list[self.measures_names.index(name)]:
+					if '%s_paper_%i'%(name,count_paper) in self.measures[name]:
+						self.update_only_tree (self.measures_names.index(name),count_paper)
+					count_paper=count_paper+1
+		json_file.close()
+
+		#print (self.number_of_papers_list[0:11])
+		#print (self.measures)
+########################################################################################################################################
+########################################################################################################################################
+########################################################################################################################################
 	# esporta il dictionary con le misure nel file JSON
 	def export_as_json (self):
-		with open ('all_measures.json','w') as json_file :
-			json.dump(self.measures,json_file,sort_keys = True,indent = 4)
+		json_file = asksaveasfile(mode='w',defaultextension='.json',filetypes=[("JSON Files", "*.json")],title='Save as')
+		json.dump(self.measures,json_file,sort_keys = True,indent = 4)
+		json_file.close()	
 ###################################################################################################################################
 ###################################################################################################################################
 ###################################################################################################################################
@@ -165,115 +160,14 @@ class Database:
 	# apre finestra per aggiungere un paper (tasto "Add paper")
 	def add_paper(self,name):
 		self.glob_var_name = name # variabile globale che assume il valore del nome della misura, per utilizzo in altre funzioni
-		# GAhh
-		if name == 'GAhh' :
-			# finestra
-			self.add_paper_window = Tk()											
-			self.add_paper_window.geometry('+700+200')									
-			self.add_paper_window.title(name)
-			# etichette ed entries
-			self.labels(self.measures_names.index(name))
-			# bottone di inserimento
-			enter_button1=Button(self.add_paper_window,text='ENTER',command=self.update_tree_and_dictionary).grid(row=24,columnspan=2,rowspan=5,pady=10)
-
-		# ggsz
-		if name == 'ggsz' :
-			# finestra
-			self.add_paper_window = Tk()											
-			self.add_paper_window.geometry('+700+200')									
-			self.add_paper_window.title(name)
-			# etichette ed entries
-			self.labels(self.measures_names.index(name))
-			# bottone di inserimento
-			enter_button1=Button(self.add_paper_window,text='ENTER',command=self.update_tree_and_dictionary).grid(row=15,columnspan=2,rowspan=5,pady=10)
-
-		# GAhhhh
-		if name == 'GAhhhh' :
-			# finestra
-			self.add_paper_window = Tk()											
-			self.add_paper_window.geometry('+700+200')									
-			self.add_paper_window.title(name)
-			# etichette ed entries
-			self.labels(self.measures_names.index(name))
-			# bottone di inserimento
-			enter_button1=Button(self.add_paper_window,text='ENTER',command=self.update_tree_and_dictionary).grid(row=18,columnspan=2,rowspan=5,pady=10)
-
-		# ADhhpi0
-		if name == 'ADhhPi0' :
-			# finestra
-			self.add_paper_window = Tk()											
-			self.add_paper_window.geometry('+700+200')									
-			self.add_paper_window.title(name)
-			# etichette ed entries
-			self.labels(self.measures_names.index(name))
-			# bottone di inserimento
-			enter_button1=Button(self.add_paper_window,text='ENTER',command=self.update_tree_and_dictionary).grid(row=24,columnspan=2,rowspan=5,pady=10)
-
-		# GLS
-		if name == 'GLS' :
-			# finestra
-			self.add_paper_window = Tk()											
-			self.add_paper_window.geometry('+700+200')									
-			self.add_paper_window.title(name)
-			# etichette ed entries
-			self.labels(self.measures_names.index(name))
-			# bottone di inserimento
-			enter_button1=Button(self.add_paper_window,text='ENTER',command=self.update_tree_and_dictionary).grid(row=12,columnspan=2,rowspan=5,pady=10)
-
-		# GAKPiPiDhh
-		if name == 'GAKPiPiDhh' :
-			# finestra
-			self.add_paper_window = Tk()											
-			self.add_paper_window.geometry('+700+200')									
-			self.add_paper_window.title(name)
-			# etichette ed entries
-			self.labels(self.measures_names.index(name))
-			# bottone di inserimento
-			enter_button1=Button(self.add_paper_window,text='ENTER',command=self.update_tree_and_dictionary).grid(row=21,columnspan=2,rowspan=5,pady=10)
-
-		# BsDsK
-		if name == 'BsDsK' :
-			# finestra
-			self.add_paper_window = Tk()											
-			self.add_paper_window.geometry('+700+200')									
-			self.add_paper_window.title(name)
-			# etichette ed entries
-			self.labels(self.measures_names.index(name))
-			# bottone di inserimento
-			enter_button1=Button(self.add_paper_window,text='ENTER',command=self.update_tree_and_dictionary).grid(row=18,columnspan=2,rowspan=5,pady=10)
-
-		# GABDK*
-		if name == 'GABDK*' :
-			# finestra
-			self.add_paper_window = Tk()											
-			self.add_paper_window.geometry('+700+200')									
-			self.add_paper_window.title(name)
-			# etichette ed entries
-			self.labels(self.measures_names.index(name))
-			# bottone di inserimento
-			enter_button1=Button(self.add_paper_window,text='ENTER',command=self.update_tree_and_dictionary).grid(row=12,columnspan=2,rowspan=5,pady=10)
-
-		# ggszDKPi
-		if name == 'ggszDKPi' :
-			# finestra
-			self.add_paper_window = Tk()											
-			self.add_paper_window.geometry('+700+200')									
-			self.add_paper_window.title(name)
-			# etichette ed entries
-			self.labels(self.measures_names.index(name))
-			# bottone di inserimento
-			enter_button1=Button(self.add_paper_window,text='ENTER',command=self.update_tree_and_dictionary).grid(row=15,columnspan=2,rowspan=5,pady=10)
-
-		# ggszDK*0
-		if name == 'ggszDK*0' :
-			# finestra
-			self.add_paper_window = Tk()											
-			self.add_paper_window.geometry('+700+200')									
-			self.add_paper_window.title(name)
-			# etichette ed entries
-			self.labels(self.measures_names.index(name))
-			# bottone di inserimento
-			enter_button1=Button(self.add_paper_window,text='ENTER',command=self.update_tree_and_dictionary).grid(row=15,columnspan=2,rowspan=5,pady=10)
+		# finestra
+		self.add_paper_window = Tk()											
+		self.add_paper_window.geometry('+700+200')									
+		self.add_paper_window.title(name)
+		# etichette ed entries
+		self.labels(self.measures_names.index(name))
+		# bottone di inserimento
+		self.add_paper_button()
 
 		self.add_paper_window.mainloop()
 #######################################################################################################################################
@@ -298,72 +192,83 @@ class Database:
 			del self.entry_list[:]		# svuota entry_list in vista del prossimo utilizzo
 			del self.entry_list_stat[:]
 			del self.entry_list_sys[:] 
-			self.add_paper_window.destroy()			
+			self.add_paper_window.destroy()
+#######################################################################################################################################
+	def create_custom_file (self):
+		messagebox.showinfo("Add papers", "Double-click the papers you want in your JSON file, then press the Enter key")
+		self.custom_measures = {} # dizionario custom sulla falsa riga di self.measures{}
+		for measure_name in self.measures_names:
+			self.custom_measures[measure_name] = {}
+		self.custom_number_of_papers_list = [0,0,0,0,0,0,0,0,0,0]
+
+		def add_to_custom_dict (measure):
+			self.item_identified = self.tree_master.identify_row(measure.y)
+			check_variable = False
+			for name in self.measures_names:
+				if self.tree_master.parent(self.item_identified) == name:
+					check_variable = True
+			if check_variable == True:
+				#copia il paper con tutti gli attributi dal dizionario principale a quello custom
+				self.custom_measures[self.tree_master.parent(self.item_identified)]['%s_paper_%i'%(self.tree_master.parent(self.item_identified),self.custom_number_of_papers_list[self.measures_names.index(self.tree_master.parent(self.item_identified))])] = self.measures[self.tree_master.parent(self.item_identified)].get(self.item_identified)
+				print (self.custom_measures[self.tree_master.parent(self.item_identified)]['%s_paper_%i'%(self.tree_master.parent(self.item_identified),self.custom_number_of_papers_list[self.measures_names.index(self.tree_master.parent(self.item_identified))])])
+				self.custom_number_of_papers_list[self.measures_names.index(self.tree_master.parent(self.item_identified))] = self.custom_number_of_papers_list[self.measures_names.index(self.tree_master.parent(self.item_identified))]+1
+			else:
+				messagebox.showerror("Error", "You can choose only papers")
+
+		def print_json_file():
+			json_file = asksaveasfile(mode='w',defaultextension='.json',filetypes=[("JSON Files", "*.json")],title='Save as')
+			json.dump(self.custom_measures,json_file,sort_keys = True,indent = 4)
+			json_file.close()
+					
+		self.tree_master.bind("<Double-Button-1>",add_to_custom_dict)
+		self.tree_master.bind("<Return>",print_json_file)
 ########################################################################################################################################
 ########################################################################################################################################
 ########################################################################################################################################
 ########################################################################################################################################
 	# metodo chiamato in add_paper per aggiungere labels ed entries
 	def labels (self,a): # a è il numero corrispondente alla misura
-		# etichette
+		del self.entry_list[:]
+		del self.entry_list_stat[:]
+		del self.entry_list_sys[:]
+		# etichette 
 		Label(self.add_paper_window,text="Date").grid(row=0,sticky=E)
-		count_entry = 0
-		for observable in self.observables_names[a] :
-			Label(self.add_paper_window,text="%s"%(observable)).grid(row=count_entry+1,sticky=E)
-			count_entry=count_entry+1
-			Label(self.add_paper_window,text="%s statistical uncertainty"%(observable)).grid(row=count_entry+1, sticky=E)
-			count_entry=count_entry+1
-			Label(self.add_paper_window,text="%s systematic uncertainty"%(observable)).grid(row=count_entry+1, sticky=E)
-			count_entry=count_entry+1
-
 		Label(self.add_paper_window,text='Statistical correlation matrix').grid(row=0,column=2,columnspan=8)
-		count_entry2 = 0 
-		for observable in self.observables_names[a] :
-			Label(self.add_paper_window,text="%s"%(observable)).grid(row=1,column=(count_entry2)+3)
-			count_entry2=(count_entry2)+1
-		count_entry2 = 0 
-		for observable in self.observables_names[a] :
-			Label(self.add_paper_window,text="%s"%(observable)).grid(row=(count_entry2)+2,column=2)
-			count_entry2=(count_entry2)+1
-
 		Label(self.add_paper_window,text='Systematic correlation matrix').grid(row=11,column=2,columnspan=8)
-		count_entry2 = 0 
-		for observable in self.observables_names[a] :
-			Label(self.add_paper_window,text="%s"%(observable)).grid(row=12,column=(count_entry2)+3)
-			count_entry2=(count_entry2)+1
-		count_entry2 = 0 
-		for observable in self.observables_names[a] :
-			Label(self.add_paper_window,text="%s"%(observable)).grid(row=(count_entry2)+13,column=2)
-			count_entry2=(count_entry2)+1
 
+		count_entry1 = 0
+		count_entry2 = 0
+		for observable in self.observables_names[a] :
+			Label(self.add_paper_window,text="%s"%(observable)).grid(row=count_entry1+1,sticky=E)
+			count_entry1=count_entry1+1
+			Label(self.add_paper_window,text="%s statistical uncertainty"%(observable)).grid(row=count_entry1+1, sticky=E)
+			count_entry1=count_entry1+1
+			Label(self.add_paper_window,text="%s systematic uncertainty"%(observable)).grid(row=count_entry1+1, sticky=E)
+			count_entry1=count_entry1+1
+			Label(self.add_paper_window,text="%s"%(observable)).grid(row=1,column=(count_entry2)+3)
+			Label(self.add_paper_window,text="%s"%(observable)).grid(row=(count_entry2)+2,column=2)
+			Label(self.add_paper_window,text="%s"%(observable)).grid(row=12,column=(count_entry2)+3)
+			Label(self.add_paper_window,text="%s"%(observable)).grid(row=(count_entry2)+13,column=2)
+			count_entry2=count_entry2+1
+			
 		# entries per permettere all'utente di digitare
 		i=0
-		j=0
-		k=0
-		l=0
-		m=0
-		while i<(count_entry+1):
+		while i<(count_entry1+1):
 			self.entry_list.append(Entry(self.add_paper_window,width=13))
 			self.entry_list[i].grid(row=i,column=1)
 			i=i+1
 		i=0
-		while j<len(self.observables_names[a]):
-			while k<len(self.observables_names[a]):
+		for j in range(0,len(self.observables_names[a])):
+			for k in range(0,len(self.observables_names[a])):
 				self.entry_list_stat.append(Entry(self.add_paper_window,width=13))
 				self.entry_list_stat[i].grid(row=j+2,column=k+3)
-				i=i+1
-				k=k+1
-			k=0
-			j=j+1
-		i=0
-		while l<len(self.observables_names[a]):
-			while m<len(self.observables_names[a]):
 				self.entry_list_sys.append(Entry(self.add_paper_window,width=13))					
-				self.entry_list_sys[i].grid(row=l+13,column=m+3)
+				self.entry_list_sys[i].grid(row=j+13,column=k+3)
 				i=i+1
-				m=m+1
-			m=0
-			l=l+1
+########################################################################################################################################
+	# pulsante parametrico della finestra add_paper
+	def add_paper_button (self):
+		enter_button1=Button(self.add_paper_window,text='ENTER',command=self.update_tree_and_dictionary).grid(row=len(self.entry_list)+3, columnspan=2,rowspan=5,pady=10)
 #########################################################################################################################################
 	# come dice il nome, funzione chiamata da update_tree_and_dictionary per aggiornare contemporaneamente dizionario delle misure e tree
 	def update_dict_measures (self,a,b): # a numero di misura, b numero di paper
