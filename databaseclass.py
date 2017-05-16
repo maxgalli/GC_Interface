@@ -215,13 +215,15 @@ class Database:
 			else:
 				messagebox.showerror("Error", "You can choose only papers")
 
-		def print_json_file():
+		def export_custom_json (event=None):
 			json_file = asksaveasfile(mode='w',defaultextension='.json',filetypes=[("JSON Files", "*.json")],title='Save as')
 			json.dump(self.custom_measures,json_file,sort_keys = True,indent = 4)
 			json_file.close()
-					
+			for measure_name in self.measures_names:
+				self.custom_measures[measure_name].clear()
+
 		self.tree_master.bind("<Double-Button-1>",add_to_custom_dict)
-		self.tree_master.bind("<Return>",print_json_file)
+		self.tree_master.bind("<Return>",export_custom_json)
 ########################################################################################################################################
 ########################################################################################################################################
 ########################################################################################################################################
