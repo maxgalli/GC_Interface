@@ -201,29 +201,33 @@ class Database:
 			self.custom_measures[measure_name] = {}
 		self.custom_number_of_papers_list = [0,0,0,0,0,0,0,0,0,0]
 
-		def add_to_custom_dict (measure):
-			self.item_identified = self.tree_master.identify_row(measure.y)
-			check_variable = False
-			for name in self.measures_names:
-				if self.tree_master.parent(self.item_identified) == name:
-					check_variable = True
-			if check_variable == True:
-				#copia il paper con tutti gli attributi dal dizionario principale a quello custom
-				self.custom_measures[self.tree_master.parent(self.item_identified)]['%s_paper_%i'%(self.tree_master.parent(self.item_identified),self.custom_number_of_papers_list[self.measures_names.index(self.tree_master.parent(self.item_identified))])] = self.measures[self.tree_master.parent(self.item_identified)].get(self.item_identified)
-				print (self.custom_measures[self.tree_master.parent(self.item_identified)]['%s_paper_%i'%(self.tree_master.parent(self.item_identified),self.custom_number_of_papers_list[self.measures_names.index(self.tree_master.parent(self.item_identified))])])
-				self.custom_number_of_papers_list[self.measures_names.index(self.tree_master.parent(self.item_identified))] = self.custom_number_of_papers_list[self.measures_names.index(self.tree_master.parent(self.item_identified))]+1
-			else:
-				messagebox.showerror("Error", "You can choose only papers")
 
-		def export_custom_json (event=None):
-			json_file = asksaveasfile(mode='w',defaultextension='.json',filetypes=[("JSON Files", "*.json")],title='Save as')
-			json.dump(self.custom_measures,json_file,sort_keys = True,indent = 4)
-			json_file.close()
-			for measure_name in self.measures_names:
-				self.custom_measures[measure_name].clear()
+		self.double_to_add = self.tree_master.bind("<Double-Button-1>", self.add_to_custom_dict)
+		self.enter_to_save = self.tree_master.bind("<Return>",self.export_custom_json)
 
-		self.tree_master.bind("<Double-Button-1>",add_to_custom_dict)
-		self.tree_master.bind("<Return>",export_custom_json)
+	def add_to_custom_dict (self, measure):
+		self.item_identified = self.tree_master.identify_row(measure.y)
+		check_variable = False
+		for name in self.measures_names:
+			if self.tree_master.parent(self.item_identified) == name:
+				check_variable = True
+		if check_variable == True:
+			#copia il paper con tutti gli attributi dal dizionario principale a quello custom
+			self.custom_measures[self.tree_master.parent(self.item_identified)]['%s_paper_%i'%(self.tree_master.parent(self.item_identified),self.custom_number_of_papers_list[self.measures_names.index(self.tree_master.parent(self.item_identified))])] = self.measures[self.tree_master.parent(self.item_identified)].get(self.item_identified)
+			print (self.custom_measures[self.tree_master.parent(self.item_identified)]['%s_paper_%i'%(self.tree_master.parent(self.item_identified),self.custom_number_of_papers_list[self.measures_names.index(self.tree_master.parent(self.item_identified))])])
+			self.custom_number_of_papers_list[self.measures_names.index(self.tree_master.parent(self.item_identified))] = self.custom_number_of_papers_list[self.measures_names.index(self.tree_master.parent(self.item_identified))]+1
+		else:
+			messagebox.showerror("Error", "You can choose only papers")
+
+	def export_custom_json (self, event=None):
+		json_file = asksaveasfile(mode='w',defaultextension='.json',filetypes=[("JSON Files", "*.json")],title='Save as')
+		json.dump(self.custom_measures,json_file,sort_keys = True,indent = 4)
+		json_file.close()
+		for measure_name in self.measures_names:
+			self.custom_measures[measure_name].clear()
+		self.tree_master.unbind("<Double-Button-1>",self.double_to_add)
+		self.tree_master.unbind("<Return>",self.enter_to_save)
+
 ########################################################################################################################################
 ########################################################################################################################################
 ########################################################################################################################################
